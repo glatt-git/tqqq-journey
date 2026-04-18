@@ -113,7 +113,8 @@ st.sidebar.caption(
     f"Target: ${config['target_equity']:,.0f} by end of {config['target_year']}"
 )
 st.sidebar.caption(f"Starting capital: ${config['starting_capital']:,.0f}")
-st.sidebar.caption(f"Adding ${config['weekly_contribution']}/week")
+if config.get("weekly_contribution"):
+    st.sidebar.caption(f"Adding ${config['weekly_contribution']}/week")
 
 
 # =====================================================================
@@ -339,18 +340,25 @@ elif page == "Strategy":
 
 - **Instrument**: TQQQ (3x leveraged Nasdaq-100 ETF) bull call spreads
 - **Long leg**: Strike at ~70% of TQQQ spot (~30% ITM)
-- **Short leg**: Strike at ~125% of TQQQ spot (~25% OTM)
+- **Short leg**: Strike at ~159% of TQQQ spot (~59% OTM)
+- **Spread width**: ~89% of spot
 - **Expiry**: ~24 months out (longest available LEAP cycle)
 - **Roll**: Each spread is held for 13 months (rolled when 11 months remain) — long-term capital gains treatment
-- **Cadence**: One new spread per month, funded by $500/week DCA + matured rolls
+- **Cadence**: One new spread per month, funded by matured rolls and ongoing contributions
 - **Sizing**: ~95% of available cash per monthly entry (5% reserve)
-- **No stops, no profit-taking early.** Diamond hands through drawdowns.
+- **No stops, no profit-taking early, no filters.** Diamond hands through drawdowns.
 
 ### Why this structure
 
-Backtest across 2010-2026 data showed this structure gives the best risk-adjusted
-return of any leveraged TQQQ strategy I tested — Sharpe ~1.01, median 4-year outcome
-~$620k from $50k + weekly DCA, but with real tail risk (worst window -99% max DD).
+Selected from parameter robustness testing across 4 regime samples (real TQQQ 2010-26,
+synthetic 3x-leveraged QQQ 2000-26, isolated bull + bear periods). The 70%/+89%
+configuration tied or outperformed every alternative tested in bull regimes (Sharpe
+~0.97-1.01) with meaningfully better bear-regime resilience than narrower spreads.
+Upside uncapped to 159% of entry spot — aligns with a bull thesis.
+
+Caveat: Sharpe differences within a cluster of near-equivalent configurations are
+within bootstrap 90% confidence intervals (~0.5-1.3). The choice is "best of several
+near-equivalents with favorable regime stability," not "statistically proven optimum."
 
 ### What could go wrong
 
