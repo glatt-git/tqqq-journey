@@ -105,7 +105,7 @@ if tqqq_now:
 
 page = st.sidebar.radio(
     "View",
-    ["Home", "Current Positions", "Trade Log", "Equity Curve", "Strategy"],
+    ["Home", "Thesis", "Current Positions", "Trade Log", "Equity Curve", "Strategy"],
     label_visibility="collapsed",
 )
 st.sidebar.divider()
@@ -203,6 +203,20 @@ if page == "Home":
 - **This is not investment advice.** It's one person's journey. Following along is
   informational; make your own decisions.
 """)
+
+
+# =====================================================================
+# Page: THESIS
+# =====================================================================
+elif page == "Thesis":
+    import streamlit.components.v1 as components
+    thesis_path = Path(__file__).parent / "thesis.html"
+    if thesis_path.exists():
+        thesis_html = thesis_path.read_text(encoding="utf-8")
+        # Render at full width; height = viewport-ish with internal scroll
+        components.html(thesis_html, height=2400, scrolling=True)
+    else:
+        st.warning("Thesis document not found in repo. Expected at `thesis.html`.")
 
 
 # =====================================================================

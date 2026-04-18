@@ -30,15 +30,15 @@ Not investment advice. Just one person's journey.
 ### Monthly entry (after tranche #1 fills)
 
 ```bash
-cd D:/Documents/Trading/TurtleSystem/tqqq-journey
+cd D:/Documents/Trading/tqqq-journey
 
 # Fill in actual values from your ToS order confirmation:
 python scripts/log_trade.py \
     --tqqq 55.50 \
-    --long 40 --short 70 \
+    --long 40 --short 90 \
     --expiry 2028-01-21 \
-    --contracts 12 \
-    --debit 13.00 \
+    --contracts 1 \
+    --debit 18.00 \
     --date 2026-05-05 \
     --note "Tranche 1 — 38.2% Fib pullback entry" \
     --vxn 24.5
@@ -52,7 +52,7 @@ The script:
 
 The web app (deployed on Streamlit Cloud) auto-detects the git push and updates within ~1 minute.
 
-### When a spread reaches 12 months remaining (roll time)
+### When a spread reaches 11 months remaining (roll time — after 13 months held)
 
 ```bash
 # First close the old position
@@ -60,7 +60,7 @@ python scripts/close_position.py \
     --id <position_id_from_positions.json> \
     --exit-price 22.00 \
     --event roll \
-    --note "Rolled at 12mo remaining"
+    --note "Rolled at 11mo remaining (13mo held, LT cap gains)"
 
 # Then enter the new one
 python scripts/log_trade.py ...
