@@ -6,6 +6,6 @@
   "target_equity": 1000000,
   "owner": "Adam",
   "owner_intro": "Former hedge fund trader, 10yr in equities/options/futures. Trading a leveraged bull thesis on Nasdaq via TQQQ LEAP spreads. Goal: $10k -> $1M by end of 2030.",
-  "strategy_summary": "Rolling 24-month bull call spreads on TQQQ with long leg at 70% of spot (30% ITM) and short leg at 125% of spot (25% OTM). One position per month funded by $500/week DCA contributions. Positions rolled when 12 months remain. No stops, no profit-taking below 2x debit. Diamond hands through drawdowns.",
+  "strategy_summary": "Rolling 24-month bull call spreads on TQQQ with long leg at 70% of spot (30% ITM) and short leg at 125% of spot (25% OTM). One position per month funded by $500/week DCA contributions. Positions held 13 months (rolled at 11 months remaining) for long-term capital gains treatment. No stops, no profit-taking below 2x debit. Diamond hands through drawdowns.",
   "web_app_url": "https://tqqq-journey.streamlit.app"
 }

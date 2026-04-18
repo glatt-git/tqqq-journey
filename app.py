@@ -341,7 +341,7 @@ elif page == "Strategy":
 - **Long leg**: Strike at ~70% of TQQQ spot (~30% ITM)
 - **Short leg**: Strike at ~125% of TQQQ spot (~25% OTM)
 - **Expiry**: ~24 months out (longest available LEAP cycle)
-- **Roll**: Each spread is rolled when 12 months remain
+- **Roll**: Each spread is held for 13 months (rolled when 11 months remain) — long-term capital gains treatment
 - **Cadence**: One new spread per month, funded by $500/week DCA + matured rolls
 - **Sizing**: ~95% of available cash per monthly entry (5% reserve)
 - **No stops, no profit-taking early.** Diamond hands through drawdowns.
