@@ -39,22 +39,22 @@ def bs_spread(S, K_low, K_high, T, r=0.04, sigma=0.60, skew=0.90):
 DATA = Path(__file__).parent / "data"
 
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=30)
 def load_config():
     return json.loads((DATA / "config.json").read_text())
 
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=30)
 def load_positions():
     return json.loads((DATA / "positions.json").read_text())["positions"]
 
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=30)
 def load_trades():
     return json.loads((DATA / "trades.json").read_text())["trades"]
 
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=30)
 def load_equity_history():
     df = pd.read_csv(DATA / "equity_history.csv")
     if len(df) > 0:
