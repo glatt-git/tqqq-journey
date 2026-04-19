@@ -1,6 +1,6 @@
 # TQQQ Journey — public trade tracker
 
-Adam's attempt to grow $50k → $1M by end of 2030 via rolling 24-month TQQQ bull call spreads.
+Max Gains' attempt to grow $50k → $1M by end of 2030 via rolling 24-month TQQQ bull call spreads.
 
 ## For followers
 
@@ -17,7 +17,7 @@ Not investment advice. Just one person's journey.
 
 ---
 
-## For Adam — operational runbook
+## For Max Gains — operational runbook
 
 ### Initial setup (one-time)
 
