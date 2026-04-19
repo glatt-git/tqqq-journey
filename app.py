@@ -98,12 +98,7 @@ st.set_page_config(
 st.sidebar.title(f"{config['owner']}'s Journey")
 st.sidebar.caption(config["strategy_name"])
 
-tqqq_now, iv_now, tqqq_date = get_current_tqqq_iv()
-if tqqq_now:
-    st.sidebar.metric("TQQQ", f"${tqqq_now:.2f}", help=f"Last close: {tqqq_date}")
-    st.sidebar.caption(f"Est IV: {iv_now*100:.0f}%")
-
-# Portfolio metric — current equity with dollar & percent change vs starting
+# Portfolio metric — prominent, at top of sidebar
 _eq_sidebar = load_equity_history()
 _starting = float(config["starting_capital"])
 if len(_eq_sidebar) > 0:
@@ -119,6 +114,11 @@ st.sidebar.metric(
     f"{_pct_change:+.2f}%",
 )
 st.sidebar.caption(f"{_dollar_str} since start")
+
+# TQQQ price — smaller, secondary
+tqqq_now, iv_now, tqqq_date = get_current_tqqq_iv()
+if tqqq_now:
+    st.sidebar.caption(f"TQQQ ${tqqq_now:.2f}  ·  IV {iv_now*100:.0f}%")
 
 page = st.sidebar.radio(
     "View",
