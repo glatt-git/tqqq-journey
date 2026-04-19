@@ -87,7 +87,7 @@ def get_current_tqqq_iv():
 config = load_config()
 st.set_page_config(
     page_title=f"{config['owner']}'s TQQQ Journey",
-    page_icon="[chart]",
+    page_icon="🚀",
     layout="wide",
 )
 
@@ -730,50 +730,42 @@ elif page == "Strategy":
     st.title("The Strategy")
     st.subheader(config["strategy_name"])
     st.markdown(f"""
-### What I'm doing
+### What I'm doing, in one paragraph
 
 {config['strategy_summary']}
 
-### The rules
+### The rules in one place
 
-- **Instrument**: TQQQ (3x leveraged Nasdaq-100 ETF) bull call spreads
-- **Long leg**: Strike at ~70% of TQQQ spot (~30% ITM)
-- **Short leg**: Strike at ~159% of TQQQ spot (~59% OTM)
-- **Spread width**: ~89% of spot
-- **Expiry**: ~24 months out (longest available LEAP cycle)
-- **Roll**: Each spread is held for 13 months (rolled when 11 months remain) — long-term capital gains treatment
-- **Cadence**: One new spread per month, funded by matured rolls and ongoing contributions
-- **Sizing**: ~95% of available cash per monthly entry (5% reserve)
-- **No stops, no profit-taking early, no filters.** Diamond hands through drawdowns.
+- **Instrument**: TQQQ bull call spreads (debit spreads on the 3x leveraged Nasdaq-100 ETF)
+- **Long leg**: strike at about 70% of TQQQ spot when I open the position (30% in-the-money)
+- **Short leg**: strike at about 159% of spot (59% out-of-the-money)
+- **Spread width**: 89% of spot, give or take a couple percentage points for strike rounding
+- **Expiry**: ~24 months out, whatever January LEAP cycle is closest to 24 months
+- **Roll**: I hold each spread for 13 months, then close it and open a new 24-month spread. The 13-month hold crosses the 1-year threshold for long-term capital gains treatment.
+- **Cadence**: one new position per month, funded from my $500/week contributions plus any cash that matures out of older positions
+- **Sizing**: up to 95% of available cash on each entry, 5% held as reserve
+- **No stops, no profit-taking below 2× debit, no IV or trend filters.** The continuous DCA is what handles regime risk. Filters mostly got in their own way in testing.
 
-### Why this structure
+### Why these specific numbers
 
-Selected from parameter robustness testing across 4 regime samples (real TQQQ 2010-26,
-synthetic 3x-leveraged QQQ 2000-26, isolated bull + bear periods). The 70%/+89%
-configuration tied or outperformed every alternative tested in bull regimes (Sharpe
-~0.97-1.01) with meaningfully better bear-regime resilience than narrower spreads.
-Upside uncapped to 159% of entry spot — aligns with a bull thesis.
+I ran a parameter sweep across every reasonable combination of long-leg depth and spread width, first on real TQQQ data from 2010 through 2026, and then on a synthetic 3x-leveraged QQQ series going back to 2000 so I could see how the strategy would have behaved through dot-com and 2008. The 70% / +89% configuration either topped the Sharpe rankings or tied the top in every regime I tested. It wasn't dramatically better than its neighbors, but the fact that it was near-best across four different sample periods is what sold me.
 
-Caveat: Sharpe differences within a cluster of near-equivalent configurations are
-within bootstrap 90% confidence intervals (~0.5-1.3). The choice is "best of several
-near-equivalents with favorable regime stability," not "statistically proven optimum."
+Two things worth being honest about:
+
+- The differences between the top-cluster configurations are within bootstrap 90% confidence intervals (roughly 0.5 to 1.3 on Sharpe). They aren't statistically distinguishable from each other. I picked 70% / +89% for cross-regime stability, not because it's provably optimal.
+- The wide short strike (+89% of spot rather than something narrower like +55%) keeps more of the upside if TQQQ rips higher than I'm modeling. That matters specifically for a bull thesis. If I'm wrong about the bull case and markets just chop sideways, a narrower spread would've been fine. I'm choosing a structure that pays more when the thesis is right.
 
 ### What could go wrong
 
-- **Prolonged bear market.** A 2000-2002 style 3-year Nasdaq collapse would punch
-  through 24-month spread expiries. The backtest window didn't include that scenario.
-- **TQQQ structural risk.** ProShares fee increases, regulatory changes, or fund
-  closure could impair the strategy without warning.
-- **My own discipline.** The strategy requires holding through 60-90% drawdowns.
-  If I panic-close during a crash, I lock in the worst outcome.
-- **Model optimism.** My backtest uses Black-Scholes idealized pricing. Real options
-  have bid/ask spreads, IV skew, and liquidity constraints that haircut returns.
+- **A prolonged bear market where dot-com repeats.** I did backtest this, using synthetic 3x-leveraged QQQ through the 2000-2010 window (dot-com collapse plus 2008 GFC combined). With the current DCA cadence, the strategy lost about 17% of total contributions through that decade. QQQ buy-and-hold roughly broke even over the same window. So in a true prolonged bear, I will meaningfully underperform a plain index hold, but I don't get wiped out. That trade-off is visible in full on the Backtest page.
+- **A bear that's longer than dot-com plus 2008 combined.** If we get a 15-year lost decade rather than a 10-year one, even monthly DCA can't save it. Rolling entries keep adding to losing positions while the debit on each expiring-worthless spread compounds the drag. This is the scenario my thesis explicitly rules out. If the thesis is wrong at that magnitude, I have to accept this outcome.
+- **TQQQ structural risk.** ProShares could raise fees, regulators could change how leveraged ETFs work, or the fund could close entirely. None of that is in the backtest.
+- **My own discipline.** The strategy needs me to hold through 60-90% drawdowns without flinching. If I panic-close during a crash, I lock in the worst outcome and abandon the structural edge I'm paying for.
+- **Model optimism.** My backtest uses Black-Scholes with a simplified implied-vol model. Real options have bid/ask spreads, volatility skew the model doesn't capture, and liquidity that dries up exactly when you'd want to roll. Expect roughly 3 to 5 percentage points less CAGR than the backtest shows.
 
 ### Not investment advice
 
-I'm not a financial advisor. This site documents what I'm doing. It's not a
-recommendation for what you should do. Your situation, risk tolerance, and
-financial goals are your own.
+I'm not a financial advisor. This site is me documenting what I'm doing with my own money. It isn't a recommendation. Your situation is your own; make your own call.
 """)
 
 
