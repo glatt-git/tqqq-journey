@@ -1,0 +1,108 @@
+{
+  "period": {
+    "start": "2010-02-11",
+    "end": "2026-04-17",
+    "years": 16.2
+  },
+  "starting_capital": 50000,
+  "weekly_contribution": 500,
+  "total_invested_by_end": 472000,
+  "strategy_config": {
+    "long_pct": 0.7,
+    "short_pct": 1.59,
+    "width_pct": 0.89,
+    "option_duration_months": 24,
+    "roll_hold_months": 13,
+    "commission_slip_pct": 3,
+    "iv_model": "1.1 x trailing 60d realized vol",
+    "risk_free_rate": 0.04
+  },
+  "headline": {
+    "realistic_rolling_4yr_median": {
+      "note": "Median of 147 rolling 4-year windows, $50k start + $500/week DCA, 2010-2022 starts on real TQQQ",
+      "total_invested": 154500,
+      "strategy_final_median": 564902,
+      "qqq_bh_final_median": 245628,
+      "strategy_multiple": 3.66
+    },
+    "single_path_16yr": {
+      "note": "$50k lump sum, no contributions, 16 years of real TQQQ 2010-2026, rolls at 13 months held",
+      "starting": 50000,
+      "final": 2058831.0,
+      "multiple": 41.2
+    }
+  },
+  "risk_adjusted_comparison": {
+    "strategy": {
+      "cagr": 56.81,
+      "maxdd": -89.68,
+      "sharpe": 1.0,
+      "sortino": 1.17,
+      "calmar": 0.63,
+      "final": 72361303.0
+    },
+    "qqq_bh": {
+      "cagr": 29.49,
+      "maxdd": -34.15,
+      "sharpe": 1.36,
+      "sortino": 1.75,
+      "calmar": 0.86,
+      "final": 3271335.0
+    },
+    "tqqq_bh": {
+      "cagr": 49.23,
+      "maxdd": -81.6,
+      "sharpe": 0.97,
+      "sortino": 1.24,
+      "calmar": 0.6,
+      "final": 32492630.0
+    },
+    "spy_bh": {
+      "cagr": 25.5,
+      "maxdd": -33.44,
+      "sharpe": 1.41,
+      "sortino": 1.73,
+      "calmar": 0.76,
+      "final": 1972193.0
+    },
+    "gld_bh": {
+      "cagr": 23.3,
+      "maxdd": -24.53,
+      "sharpe": 1.35,
+      "sortino": 1.79,
+      "calmar": 0.95,
+      "final": 1481475.0
+    },
+    "blend_6040": {
+      "cagr": 22.94,
+      "maxdd": -25.01,
+      "sharpe": 1.73,
+      "sortino": 2.11,
+      "calmar": 0.92,
+      "final": 1412693.0
+    }
+  },
+  "stress_2000_2010": {
+    "starting": 10000,
+    "total_invested": 274000,
+    "final": 228350.0,
+    "pct_of_invested": 83.3
+  },
+  "parameter_robustness_sharpe": {
+    "note": "Bootstrap 90% CI on Sharpe for various {long_pct}/{width_pct} configs on real TQQQ 2010-2026",
+    "production_config": "70/+89",
+    "bootstrap_ci_90pct": [
+      0.53,
+      1.32
+    ],
+    "neighbors_point_sharpe": {
+      "60/+55": 0.98,
+      "70/+34": 0.91,
+      "70/+55": 0.97,
+      "70/+89": 0.97,
+      "80/+55": 0.9,
+      "55/+89": 0.98
+    },
+    "interpretation": "Point-Sharpe differences within the cluster are within statistical noise. 70/+89 selected for cross-regime stability (tied or better in every regime tested)."
+  }
+}
