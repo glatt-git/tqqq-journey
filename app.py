@@ -122,7 +122,7 @@ st.sidebar.caption(f"{_dollar_str} since start")
 
 page = st.sidebar.radio(
     "View",
-    ["Home", "Thesis", "Backtest", "Current Positions", "Trade Log", "Equity Curve", "Strategy"],
+    ["Home", "Strategy", "Thesis", "Backtest", "Positions", "Trade Log", "Equity Curve"],
     label_visibility="collapsed",
 )
 st.sidebar.divider()
@@ -604,10 +604,10 @@ regime. Asymmetric reporting is not conservative reporting.
 
 
 # =====================================================================
-# Page: CURRENT POSITIONS
+# Page: POSITIONS
 # =====================================================================
-elif page == "Current Positions":
-    st.title("Current Positions")
+elif page == "Positions":
+    st.title("Positions")
     positions = load_positions()
     open_pos = [p for p in positions if p.get("status") == "open"]
 
