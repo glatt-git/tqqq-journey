@@ -103,6 +103,23 @@ if tqqq_now:
     st.sidebar.metric("TQQQ", f"${tqqq_now:.2f}", help=f"Last close: {tqqq_date}")
     st.sidebar.caption(f"Est IV: {iv_now*100:.0f}%")
 
+# Portfolio metric — current equity with dollar & percent change vs starting
+_eq_sidebar = load_equity_history()
+_starting = float(config["starting_capital"])
+if len(_eq_sidebar) > 0:
+    _current_equity = float(_eq_sidebar["total_equity"].iloc[-1])
+else:
+    _current_equity = _starting
+_dollar_change = _current_equity - _starting
+_pct_change = (_current_equity / _starting - 1) * 100 if _starting > 0 else 0.0
+_dollar_str = f"+${_dollar_change:,.0f}" if _dollar_change >= 0 else f"-${abs(_dollar_change):,.0f}"
+st.sidebar.metric(
+    "Portfolio",
+    f"${_current_equity:,.0f}",
+    f"{_pct_change:+.2f}%",
+)
+st.sidebar.caption(f"{_dollar_str} since start")
+
 page = st.sidebar.radio(
     "View",
     ["Home", "Thesis", "Backtest", "Current Positions", "Trade Log", "Equity Curve", "Strategy"],
