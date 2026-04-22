@@ -147,11 +147,15 @@ def main():
     print(f"  Invested: ${invested:,.2f}  Cash: ${cash:,.2f}  Open value: ${total_open_value:,.2f}  "
           f"Total equity: ${total_equity:,.2f}")
 
-    # Append to equity history (replace row if already today)
+    # Append to equity history (replace row if already today).
+    # Use pd.Timestamp for the new row's date so the column stays a uniform datetime dtype
+    # after concat — previously the new row was an ISO string, producing mixed dtypes that
+    # broke sort_values once the CSV had any existing rows.
     eq_df = load_equity_history()
+    eq_df["date"] = pd.to_datetime(eq_df["date"])
     eq_df = eq_df[eq_df["date"] != pd.Timestamp(last_date)]
     row = {
-        "date": last_date.isoformat(),
+        "date": pd.Timestamp(last_date),
         "tqqq_close": round(tqqq_close, 2),
         "cash": round(cash, 2),
         "open_spread_value": round(total_open_value, 2),
