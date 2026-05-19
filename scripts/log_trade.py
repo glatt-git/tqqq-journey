@@ -67,10 +67,10 @@ def main():
     warnings = []
     if not (0.60 <= long_pct <= 0.80):
         warnings.append(f"Long strike is at {long_pct*100:.0f}% of spot; strategy target is 70%")
-    if not (1.15 <= short_pct <= 1.35):
-        warnings.append(f"Short strike is at {short_pct*100:.0f}% of spot; strategy target is 125%")
-    if not (0.40 <= width_pct <= 0.70):
-        warnings.append(f"Width is {width_pct*100:.0f}%; strategy target is 55%")
+    if not (1.45 <= short_pct <= 1.75):
+        warnings.append(f"Short strike is at {short_pct*100:.0f}% of spot; strategy target is 159%")
+    if not (0.80 <= width_pct <= 1.00):
+        warnings.append(f"Width is {width_pct*100:.0f}%; strategy target is 89%")
     exp_date = datetime.strptime(args.expiry, "%Y-%m-%d").date()
     months_to_exp = (exp_date - date_cls.fromisoformat(entry_date)).days / 30.44
     if months_to_exp < 20:
