@@ -1,3 +1,30 @@
 {
-  "trades": []
+  "trades": [
+    {
+      "id": "tqqq-2026-05-19-a4ef96",
+      "event": "open",
+      "date": "2026-05-19",
+      "position_id": "tqqq-2026-05-19-a4ef96",
+      "details": {
+        "id": "tqqq-2026-05-19-a4ef96",
+        "entry_date": "2026-05-19",
+        "underlying": "TQQQ",
+        "strategy": "bull_call_spread",
+        "tqqq_at_entry": 71.42,
+        "vxn_at_entry": null,
+        "long_strike": 50.0,
+        "short_strike": 115.0,
+        "width": 65.0,
+        "expiry": "2028-01-21",
+        "contracts": 1,
+        "net_debit_per_share": 22.0,
+        "net_debit_per_contract": 2200.0,
+        "total_cost": 2200.0,
+        "max_profit": 4300.0,
+        "breakeven": 72.0,
+        "note": "Partial entry on pull-back from runaway move",
+        "status": "open"
+      }
+    }
+  ]
 }
