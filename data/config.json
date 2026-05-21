@@ -1,5 +1,6 @@
 {
   "starting_capital": 50000,
+  "weekly_contribution": 500,
   "strategy_name": "TQQQ 70%/+89% Bull Call Spread",
   "target_year": 2030,
   "target_equity": 1000000,
