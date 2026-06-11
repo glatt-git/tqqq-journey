@@ -270,7 +270,7 @@ if page == "Home":
     st.markdown("### The strategy in one paragraph")
     st.write(config["strategy_summary"])
 
-    st.markdown("### Honest caveats")
+    st.markdown("### Caveats")
     st.markdown("""
 - **This is a leveraged options strategy.** Historical backtest shows 60-90% drawdowns
   during bear markets. The commitment is to hold through them.
@@ -502,7 +502,7 @@ elif page == "Backtest":
         st.altair_chart(chart_d, use_container_width=True)
 
         st.info(
-            "**Honest takeaway**: In a 2000-style regime, the strategy loses ~17% of total "
+            "**Takeaway**: In a 2000-style regime, the strategy loses ~17% of total "
             "contributions while QQQ buy-and-hold roughly breaks even. DCA converts the crash "
             "into accumulation opportunities, but the leveraged option premiums still cost money "
             "on positions that roll through falling markets. If you expect this kind of regime, "
