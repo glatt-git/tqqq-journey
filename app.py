@@ -210,19 +210,54 @@ if page == "Home":
     st.write(config.get("owner_intro", ""))
 
     st.divider()
-    # All metrics use the precomputed live values from the top of the file.
+
+    # Bubble-metric helper. sign: None=neutral, 1=positive (green), -1=negative (red), 0=zero (neutral)
+    def _bubble(label, value_str, sign=None, tooltip=""):
+        if sign is None or sign == 0:
+            bg, fg = "transparent", "rgba(255,255,255,0.95)"
+            pad = "0"
+        elif sign > 0:
+            bg, fg = "rgba(46, 160, 67, 0.15)", "rgb(63, 185, 80)"
+            pad = "0.25rem 0.7rem"
+        else:
+            bg, fg = "rgba(248, 81, 73, 0.15)", "rgb(248, 81, 73)"
+            pad = "0.25rem 0.7rem"
+        title_attr = f' title="{tooltip}"' if tooltip else ""
+        return f"""
+        <div style="margin-bottom:0.5rem;">
+            <div{title_attr} style="font-size:0.85rem; color:rgba(255,255,255,0.6);
+                                    margin-bottom:0.35rem; cursor: {'help' if tooltip else 'default'};">
+                {label}{' &#9432;' if tooltip else ''}
+            </div>
+            <div style="font-size:2rem; font-weight:600; padding:{pad};
+                        background:{bg}; color:{fg}; border-radius:0.5rem;
+                        display:inline-block; line-height:1.1;">
+                {value_str}
+            </div>
+        </div>
+        """
+
     col1, col2, col3, col4, col5 = st.columns(5)
-    col1.metric("Current equity", f"${_current_equity:,.0f}",
-                f"{_pct_change:+.2f}% vs start",
-                help="Starting capital + realized + unrealized P&L")
-    col2.metric("Total invested", f"${_total_invested_open:,.0f}",
-                help="Cost basis of currently open positions")
-    col3.metric("Unrealized P&L", f"${_unrealized:+,.0f}",
-                help="Live mark-to-market on open positions (BS-estimated)")
-    col4.metric("Realized P&L", f"${_realized:+,.0f}",
-                help="Closed/expired/rolled positions, cumulative")
-    col5.metric("ROI", f"{_roi*100:+.2f}%",
-                help="(Realized + Unrealized) / Total invested")
+    col1.markdown(_bubble("Current equity", f"${_current_equity:,.0f}",
+                          sign=None,
+                          tooltip="Starting capital + realized + unrealized P&L"),
+                  unsafe_allow_html=True)
+    col2.markdown(_bubble("Total invested", f"${_total_invested_open:,.0f}",
+                          sign=None,
+                          tooltip="Cost basis of currently open positions"),
+                  unsafe_allow_html=True)
+    col3.markdown(_bubble("Unrealized P&L", f"${_unrealized:+,.0f}",
+                          sign=1 if _unrealized > 0 else (-1 if _unrealized < 0 else 0),
+                          tooltip="Live mark-to-market on open positions"),
+                  unsafe_allow_html=True)
+    col4.markdown(_bubble("Realized P&L", f"${_realized:+,.0f}",
+                          sign=1 if _realized > 0 else (-1 if _realized < 0 else 0),
+                          tooltip="Closed/expired/rolled positions, cumulative"),
+                  unsafe_allow_html=True)
+    col5.markdown(_bubble("ROI", f"{_roi*100:+.2f}%",
+                          sign=1 if _total_pnl > 0 else (-1 if _total_pnl < 0 else 0),
+                          tooltip="(Realized + Unrealized) / Total invested"),
+                  unsafe_allow_html=True)
 
     # Progress to target
     target = config["target_equity"]
@@ -502,7 +537,7 @@ elif page == "Backtest":
         st.dataframe(pd.DataFrame(ra_rows), use_container_width=True, hide_index=True)
         st.caption(
             "The strategy beats every benchmark on absolute return and CAGR. On risk-adjusted "
-            "metrics, it's competitive with TQQQ BH but not better than QQQ BH — the strategy's "
+            "metrics, it's competitive with TQQQ BH but not better than QQQ BH. The strategy's "
             "edge is leverage magnitude, not Sharpe. Max DD is severe by design; the trade-off "
             "for the return."
         )
@@ -585,9 +620,9 @@ materially outside, something has changed (regime, liquidity, or your execution)
 """)
 
         # -----------------------------------------------------------------
-        # Expandable: Honest caveats
+        # Expandable: Caveats and limits
         # -----------------------------------------------------------------
-        with st.expander("Honest caveats"):
+        with st.expander("Caveats and limits"):
             st.markdown("""
 **Sample size**: The real TQQQ data spans ~16 years, about 192 monthly entries.
 The standard error on a Sharpe estimate with ~200 observations is roughly 1/√200 ≈ 0.07.
@@ -623,7 +658,7 @@ regime. Asymmetric reporting is not conservative reporting.
         st.caption(
             "Source code for all backtests: "
             "[github.com/glatt-git/tqqq-journey/scripts](https://github.com/glatt-git/tqqq-journey/tree/main/scripts) "
-            "— `precompute_backtest.py` regenerates every number on this page."
+            "(`precompute_backtest.py` regenerates every number on this page.)"
         )
 
 
@@ -656,7 +691,7 @@ elif page == "Positions":
                 c1, c2, c3 = st.columns([2, 2, 1])
                 c1.markdown(
                     f"**TQQQ {p['long_strike']:.0f} / {p['short_strike']:.0f} "
-                    f"bull call spread** — expires {p['expiry']}"
+                    f"bull call spread**, expires {p['expiry']}"
                 )
                 c1.caption(
                     f"{p['contracts']} contracts at entry. Opened {p['entry_date']} "
@@ -774,7 +809,7 @@ elif page == "Strategy":
 
 I ran a parameter sweep across every reasonable combination of long-leg depth and spread width, first on real TQQQ data from 2010 through 2026, and then on a synthetic 3x-leveraged QQQ series going back to 2000 so I could see how the strategy would have behaved through dot-com and 2008. The 70% / +89% configuration either topped the Sharpe rankings or tied the top in every regime I tested. It wasn't dramatically better than its neighbors, but the fact that it was near-best across four different sample periods is what sold me.
 
-Two things worth being honest about:
+Two things to flag:
 
 - The differences between the top-cluster configurations are within bootstrap 90% confidence intervals (roughly 0.5 to 1.3 on Sharpe). They aren't statistically distinguishable from each other. I picked 70% / +89% for cross-regime stability, not because it's provably optimal.
 - The wide short strike (+89% of spot rather than something narrower like +55%) keeps more of the upside if TQQQ rips higher than I'm modeling. That matters specifically for a bull thesis. If I'm wrong about the bull case and markets just chop sideways, a narrower spread would've been fine. I'm choosing a structure that pays more when the thesis is right.
