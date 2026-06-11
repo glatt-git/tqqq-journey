@@ -93,20 +93,54 @@ st.set_page_config(
 
 
 # =====================================================================
+# Compute live portfolio state ONCE — used by sidebar + all pages
+# =====================================================================
+tqqq_now, iv_now, tqqq_date = get_current_tqqq_iv()
+_positions_live = load_positions()
+_eq_live = load_equity_history()
+_starting = float(config["starting_capital"])
+
+# Live unrealized + realized via Black-Scholes on each open position
+_today = date.today()
+_unrealized = 0.0
+_realized = 0.0
+_total_open_value = 0.0
+for _p in _positions_live:
+    if _p.get("status") == "open" and tqqq_now:
+        _expiry = datetime.strptime(_p["expiry"], "%Y-%m-%d").date()
+        _T = max(0.001, (_expiry - _today).days / 365.25)
+        _val_per_share = bs_spread(tqqq_now, float(_p["long_strike"]),
+                                   float(_p["short_strike"]), _T, sigma=iv_now)
+        _cv = _val_per_share * 100 * int(_p["contracts"])
+        _total_open_value += _cv
+        _unrealized += _cv - float(_p["total_cost"])
+    elif _p.get("status") in ("closed", "expired", "rolled"):
+        _realized += float(_p.get("realized_pnl", 0))
+
+# Fallback: yfinance returned None — use the daily cron's stored values
+if not tqqq_now and len(_eq_live) > 0:
+    _stored_open = float(_eq_live["open_spread_value"].iloc[-1])
+    _open_cost_basis = sum(float(p["total_cost"]) for p in _positions_live
+                           if p.get("status") == "open")
+    _unrealized = _stored_open - _open_cost_basis
+    _total_open_value = _stored_open
+
+# Derived metrics — single source of truth
+_total_invested_open = sum(float(p["total_cost"]) for p in _positions_live
+                           if p.get("status") == "open")
+_total_pnl = _realized + _unrealized
+_current_equity = _starting + _total_pnl
+_roi = (_total_pnl / _total_invested_open) if _total_invested_open > 0 else 0.0
+_dollar_change = _current_equity - _starting
+_pct_change = (_current_equity / _starting - 1) * 100 if _starting > 0 else 0.0
+
+# =====================================================================
 # Sidebar navigation
 # =====================================================================
 st.sidebar.title(f"{config['owner']}'s Journey")
 st.sidebar.caption(config["strategy_name"])
 
 # Portfolio metric — prominent, at top of sidebar
-_eq_sidebar = load_equity_history()
-_starting = float(config["starting_capital"])
-if len(_eq_sidebar) > 0:
-    _current_equity = float(_eq_sidebar["total_equity"].iloc[-1])
-else:
-    _current_equity = _starting
-_dollar_change = _current_equity - _starting
-_pct_change = (_current_equity / _starting - 1) * 100 if _starting > 0 else 0.0
 _dollar_str = f"+${_dollar_change:,.0f}" if _dollar_change >= 0 else f"-${abs(_dollar_change):,.0f}"
 st.sidebar.metric(
     "Portfolio",
@@ -116,7 +150,6 @@ st.sidebar.metric(
 st.sidebar.caption(f"{_dollar_str} since start")
 
 # TQQQ price — smaller, secondary
-tqqq_now, iv_now, tqqq_date = get_current_tqqq_iv()
 if tqqq_now:
     st.sidebar.caption(f"TQQQ ${tqqq_now:.2f}  ·  IV {iv_now*100:.0f}%")
 
@@ -177,42 +210,25 @@ if page == "Home":
     st.write(config.get("owner_intro", ""))
 
     st.divider()
-    positions = load_positions()
-    total_open, unrealized, realized, _ = compute_portfolio_state(
-        positions, tqqq_now, iv_now,
-    )
-
-    eq_df = load_equity_history()
-    if len(eq_df) > 0:
-        latest_eq = float(eq_df["total_equity"].iloc[-1])
-        invested = float(eq_df["invested_to_date"].iloc[-1])
-        # Fallback: when yfinance fails in get_current_tqqq_iv, the live BS-based
-        # unrealized calc above returns 0. Use the daily-cron's stored open_spread_value
-        # vs sum of cost basis as a robust fallback.
-        if unrealized == 0 and tqqq_now is None:
-            stored_open_val = float(eq_df["open_spread_value"].iloc[-1])
-            total_cost_basis = sum(float(p["total_cost"]) for p in positions
-                                   if p.get("status") == "open")
-            unrealized = stored_open_val - total_cost_basis
-    else:
-        latest_eq = config["starting_capital"]
-        invested = config["starting_capital"]
-
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Current equity", f"${latest_eq:,.0f}",
-                f"{(latest_eq/config['starting_capital']-1)*100:+.1f}% vs start")
-    col2.metric("Total invested", f"${invested:,.0f}",
-                help="Actual capital paid in (starting cap + logged contributions)")
-    col3.metric("Unrealized P&L", f"${unrealized:+,.0f}",
-                help="Mark-to-market on open positions (BS-estimated)")
-    col4.metric("Realized P&L", f"${realized:+,.0f}",
+    # All metrics use the precomputed live values from the top of the file.
+    col1, col2, col3, col4, col5 = st.columns(5)
+    col1.metric("Current equity", f"${_current_equity:,.0f}",
+                f"{_pct_change:+.2f}% vs start",
+                help="Starting capital + realized + unrealized P&L")
+    col2.metric("Total invested", f"${_total_invested_open:,.0f}",
+                help="Cost basis of currently open positions")
+    col3.metric("Unrealized P&L", f"${_unrealized:+,.0f}",
+                help="Live mark-to-market on open positions (BS-estimated)")
+    col4.metric("Realized P&L", f"${_realized:+,.0f}",
                 help="Closed/expired/rolled positions, cumulative")
+    col5.metric("ROI", f"{_roi*100:+.2f}%",
+                help="(Realized + Unrealized) / Total invested")
 
     # Progress to target
     target = config["target_equity"]
-    pct_to_target = latest_eq / target * 100
-    st.progress(min(1.0, latest_eq / target),
-                text=f"${latest_eq:,.0f} / ${target:,.0f} target by {config['target_year']} "
+    pct_to_target = _current_equity / target * 100
+    st.progress(min(1.0, _current_equity / target),
+                text=f"${_current_equity:,.0f} / ${target:,.0f} target by {config['target_year']} "
                      f"({pct_to_target:.1f}%)")
 
     st.divider()
