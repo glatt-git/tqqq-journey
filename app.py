@@ -163,8 +163,33 @@ st.sidebar.caption(
     f"Target: ${config['target_equity']:,.0f} by end of {config['target_year']}"
 )
 st.sidebar.caption(f"Starting capital: ${config['starting_capital']:,.0f}")
-if config.get("weekly_contribution"):
-    st.sidebar.caption(f"Adding ${config['weekly_contribution']}/week")
+
+
+# =====================================================================
+# Bubble-metric helper — used by Home, Equity Curve, and Positions pages
+# sign: None = neutral, 1 = positive (green), -1 = negative (red), 0 = neutral
+# =====================================================================
+def _bubble(label, value_str, sign=None, tooltip=""):
+    if sign is None or sign == 0:
+        bg, fg, pad = "transparent", "rgba(255,255,255,0.95)", "0"
+    elif sign > 0:
+        bg, fg, pad = "rgba(46, 160, 67, 0.15)", "rgb(63, 185, 80)", "0.25rem 0.7rem"
+    else:
+        bg, fg, pad = "rgba(248, 81, 73, 0.15)", "rgb(248, 81, 73)", "0.25rem 0.7rem"
+    title_attr = f' title="{tooltip}"' if tooltip else ""
+    return f"""
+    <div style="margin-bottom:0.5rem;">
+        <div{title_attr} style="font-size:0.85rem; color:rgba(255,255,255,0.6);
+                                margin-bottom:0.35rem; cursor:{'help' if tooltip else 'default'};">
+            {label}{' &#9432;' if tooltip else ''}
+        </div>
+        <div style="font-size:2rem; font-weight:600; padding:{pad};
+                    background:{bg}; color:{fg}; border-radius:0.5rem;
+                    display:inline-block; line-height:1.1;">
+            {value_str}
+        </div>
+    </div>
+    """
 
 
 # =====================================================================
@@ -210,33 +235,6 @@ if page == "Home":
     st.write(config.get("owner_intro", ""))
 
     st.divider()
-
-    # Bubble-metric helper. sign: None=neutral, 1=positive (green), -1=negative (red), 0=zero (neutral)
-    def _bubble(label, value_str, sign=None, tooltip=""):
-        if sign is None or sign == 0:
-            bg, fg = "transparent", "rgba(255,255,255,0.95)"
-            pad = "0"
-        elif sign > 0:
-            bg, fg = "rgba(46, 160, 67, 0.15)", "rgb(63, 185, 80)"
-            pad = "0.25rem 0.7rem"
-        else:
-            bg, fg = "rgba(248, 81, 73, 0.15)", "rgb(248, 81, 73)"
-            pad = "0.25rem 0.7rem"
-        title_attr = f' title="{tooltip}"' if tooltip else ""
-        return f"""
-        <div style="margin-bottom:0.5rem;">
-            <div{title_attr} style="font-size:0.85rem; color:rgba(255,255,255,0.6);
-                                    margin-bottom:0.35rem; cursor: {'help' if tooltip else 'default'};">
-                {label}{' &#9432;' if tooltip else ''}
-            </div>
-            <div style="font-size:2rem; font-weight:600; padding:{pad};
-                        background:{bg}; color:{fg}; border-radius:0.5rem;
-                        display:inline-block; line-height:1.1;">
-                {value_str}
-            </div>
-        </div>
-        """
-
     col1, col2, col3, col4, col5 = st.columns(5)
     col1.markdown(_bubble("Current equity", f"${_current_equity:,.0f}",
                           sign=None,
@@ -762,24 +760,37 @@ elif page == "Equity Curve":
         st.info("Need at least 2 days of history to plot. Check back tomorrow.")
     else:
         import altair as alt
-        chart_data = eq_df[["date", "total_equity", "invested_to_date"]].copy()
+        chart_data = eq_df[["date", "total_equity"]].copy()
+        chart_data = chart_data.rename(columns={"total_equity": "Total equity"})
         chart_data = chart_data.melt("date", var_name="series", value_name="value")
         chart = alt.Chart(chart_data).mark_line().encode(
-            x="date:T",
-            y=alt.Y("value:Q", title="$"),
-            color="series:N",
+            x=alt.X("date:T", title="Date"),
+            y=alt.Y("value:Q", title="$", scale=alt.Scale(zero=False)),
+            color=alt.Color("series:N", legend=None),
         ).properties(height=400)
-        st.altair_chart(chart, use_container_width=True)
+        # Horizontal reference line at starting capital
+        ref_line = alt.Chart(pd.DataFrame({"y": [float(config["starting_capital"])]})).mark_rule(
+            color="rgba(255,255,255,0.3)", strokeDash=[4, 4]
+        ).encode(y="y:Q")
+        st.altair_chart(chart + ref_line, use_container_width=True)
+        st.caption(
+            f"Dashed line marks starting capital (\\${config['starting_capital']:,}). "
+            "Solid line is daily total equity (cash + position MTM). Updated daily after market close."
+        )
 
-        # Summary stats
-        latest = eq_df.iloc[-1]
-        first = eq_df.iloc[0]
+        # Summary stats — use the same live values as the dashboard so this page agrees.
         days = (eq_df["date"].iloc[-1] - eq_df["date"].iloc[0]).days
         col1, col2, col3 = st.columns(3)
-        col1.metric("Latest equity", f"${latest['total_equity']:,.0f}")
-        col2.metric("Net P&L",
-                    f"${latest['total_equity'] - latest['invested_to_date']:+,.0f}")
-        col3.metric("Days tracked", days)
+        col1.markdown(_bubble("Current equity", f"${_current_equity:,.0f}", sign=None,
+                              tooltip="Live: starting capital + realized + unrealized"),
+                      unsafe_allow_html=True)
+        col2.markdown(_bubble("Net P&L", f"${_total_pnl:+,.0f}",
+                              sign=1 if _total_pnl > 0 else (-1 if _total_pnl < 0 else 0),
+                              tooltip="Realized + Unrealized"),
+                      unsafe_allow_html=True)
+        col3.markdown(_bubble("Days tracked", f"{days}", sign=None,
+                              tooltip="Days since first equity-history row"),
+                      unsafe_allow_html=True)
 
 
 # =====================================================================
