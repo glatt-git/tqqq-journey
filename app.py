@@ -186,6 +186,14 @@ if page == "Home":
     if len(eq_df) > 0:
         latest_eq = float(eq_df["total_equity"].iloc[-1])
         invested = float(eq_df["invested_to_date"].iloc[-1])
+        # Fallback: when yfinance fails in get_current_tqqq_iv, the live BS-based
+        # unrealized calc above returns 0. Use the daily-cron's stored open_spread_value
+        # vs sum of cost basis as a robust fallback.
+        if unrealized == 0 and tqqq_now is None:
+            stored_open_val = float(eq_df["open_spread_value"].iloc[-1])
+            total_cost_basis = sum(float(p["total_cost"]) for p in positions
+                                   if p.get("status") == "open")
+            unrealized = stored_open_val - total_cost_basis
     else:
         latest_eq = config["starting_capital"]
         invested = config["starting_capital"]
@@ -194,7 +202,7 @@ if page == "Home":
     col1.metric("Current equity", f"${latest_eq:,.0f}",
                 f"{(latest_eq/config['starting_capital']-1)*100:+.1f}% vs start")
     col2.metric("Total invested", f"${invested:,.0f}",
-                help="Starting cap + weekly contributions to date")
+                help="Actual capital paid in (starting cap + logged contributions)")
     col3.metric("Unrealized P&L", f"${unrealized:+,.0f}",
                 help="Mark-to-market on open positions (BS-estimated)")
     col4.metric("Realized P&L", f"${realized:+,.0f}",

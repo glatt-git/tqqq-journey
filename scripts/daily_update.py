@@ -126,18 +126,12 @@ def main():
         print(f"  {p['id']}: cost ${val['cost_basis']:,.0f} -> value ${val['total_value']:,.0f} "
               f"({val['unrealized_pct']:+.1f}%)")
 
-    # Compute invested to date = starting + contributions
-    today = date_cls.today()
-    # Estimate contributions: $500/week since account start (use earliest trade date or config)
-    # For simplicity use first position entry date if present, else skip
-    if positions:
-        start_dt = min(p["entry_date"] for p in positions)
-        start_dt = date_cls.fromisoformat(start_dt)
-        weeks_elapsed = max(0, (today - start_dt).days / 7)
-        contribs = config["weekly_contribution"] * weeks_elapsed
-    else:
-        contribs = 0
-    invested = starting_cap + contribs
+    # Invested = actual capital paid in. For now, just starting capital — Adam has not
+    # logged real DCA contributions yet. When contributions are tracked (future:
+    # data/contributions.json), sum them here. Do NOT simulate $500/week as if it had
+    # been deposited — that inflates "Total invested" and "Total equity" with money
+    # that doesn't exist, masking the real P&L.
+    invested = starting_cap
 
     # Cash = invested - cumulative entry costs + cumulative exit proceeds
     total_entry_cost = sum(float(p["total_cost"]) for p in positions)
