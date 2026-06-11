@@ -25,6 +25,32 @@
         "note": "Partial entry on pull-back from runaway move",
         "status": "open"
       }
+    },
+    {
+      "id": "tqqq-2026-06-11-a3ff4a",
+      "event": "open",
+      "date": "2026-06-11",
+      "position_id": "tqqq-2026-06-11-a3ff4a",
+      "details": {
+        "id": "tqqq-2026-06-11-a3ff4a",
+        "entry_date": "2026-06-11",
+        "underlying": "TQQQ",
+        "strategy": "bull_call_spread",
+        "tqqq_at_entry": 70.3,
+        "vxn_at_entry": null,
+        "long_strike": 50.0,
+        "short_strike": 115.0,
+        "width": 65.0,
+        "expiry": "2028-01-21",
+        "contracts": 1,
+        "net_debit_per_share": 20.5,
+        "net_debit_per_contract": 2050.0,
+        "total_cost": 2050.0,
+        "max_profit": 4450.0,
+        "breakeven": 70.5,
+        "note": "Partial entry #2; same expiry as #1 (Jan 2029 not yet listed)",
+        "status": "open"
+      }
     }
   ]
 }
