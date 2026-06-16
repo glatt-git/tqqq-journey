@@ -45,7 +45,7 @@
       "entry_date": "2026-06-16",
       "underlying": "TQQQ",
       "strategy": "bull_call_spread",
-      "tqqq_at_entry": 80.71,
+      "tqqq_at_entry": 81.2,
       "vxn_at_entry": null,
       "long_strike": 50.0,
       "short_strike": 115.0,
