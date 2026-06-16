@@ -815,6 +815,7 @@ elif page == "Strategy":
 - **Cadence**: one new position per month, funded from my $500/week contributions plus any cash that matures out of older positions
 - **Sizing**: up to 95% of available cash on each entry, 5% held as reserve
 - **No stops, no profit-taking below 2× debit, no IV or trend filters.** The continuous DCA is what handles regime risk. Filters mostly got in their own way in testing.
+- **Chain recheck before each entry**: Before placing the order, I check the live option chain for newly-listed strikes. The OCC adds higher short strikes as TQQQ extends, so the right strike for this month may not have existed last month. If 159% of spot is above the top of the chain, I take the highest available strike and log the entry as chain-constrained.
 
 ### Why these specific numbers
 
