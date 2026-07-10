@@ -59,6 +59,26 @@
       "breakeven": 74.5,
       "note": "Monthly add #3 (window slipped one day, filled 6/16 14:03)",
       "status": "open"
+    },
+    {
+      "id": "tqqq-2026-07-10-225099",
+      "entry_date": "2026-07-10",
+      "underlying": "TQQQ",
+      "strategy": "bull_call_spread",
+      "tqqq_at_entry": 77.0,
+      "vxn_at_entry": null,
+      "long_strike": 55.0,
+      "short_strike": 125.0,
+      "width": 70.0,
+      "expiry": "2028-01-21",
+      "contracts": 1,
+      "net_debit_per_share": 23.25,
+      "net_debit_per_contract": 2325.0,
+      "total_cost": 2325.0,
+      "max_profit": 4675.0,
+      "breakeven": 78.25,
+      "note": "Monthly add #4. First entry with re-anchored strikes per chain-recheck rule (new 55/125 cohort). Jan 2028 still latest LEAP available.",
+      "status": "open"
     }
   ]
 }
