@@ -142,7 +142,7 @@ def main():
     print()
     msg_lines = [
         "[*] New trade opened!",
-        f"TQQQ {_pretty_expiry(args.expiry)} {args.long:.0f}/{args.short:.0f} bull call spread",
+        f"TQQQ {_pretty_expiry(args.expiry)} {args.long:g}/{args.short:g} bull call spread",
         "",
         f"  - TQQQ @ ${args.tqqq:.2f}  ({args.contracts} contracts)",
         f"  - Debit: ${args.debit:.2f}/share  (total ${args.debit * 100 * args.contracts:,.0f})",
