@@ -103,6 +103,32 @@
         "note": "Monthly add #4. First entry with re-anchored strikes per chain-recheck rule (new 55/125 cohort). Jan 2028 still latest LEAP available.",
         "status": "open"
       }
+    },
+    {
+      "id": "tqqq-2026-07-29-1a4e0c",
+      "event": "open",
+      "date": "2026-07-29",
+      "position_id": "tqqq-2026-07-29-1a4e0c",
+      "details": {
+        "id": "tqqq-2026-07-29-1a4e0c",
+        "entry_date": "2026-07-29",
+        "underlying": "TQQQ",
+        "strategy": "bull_call_spread",
+        "tqqq_at_entry": 59.0,
+        "vxn_at_entry": null,
+        "long_strike": 42.5,
+        "short_strike": 95.0,
+        "width": 52.5,
+        "expiry": "2028-01-21",
+        "contracts": 1,
+        "net_debit_per_share": 16.8,
+        "net_debit_per_contract": 1680.0,
+        "total_cost": 1680.0,
+        "max_profit": 3570.0,
+        "breakeven": 59.3,
+        "note": "Pullback add #1: ~61.8% Fib retrace from June TQQQ high. First pullback-triggered entry per Plan v2.",
+        "status": "open"
+      }
     }
   ]
 }
