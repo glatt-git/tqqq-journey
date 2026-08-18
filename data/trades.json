@@ -129,6 +129,32 @@
         "note": "Pullback add #1: ~61.8% Fib retrace from June TQQQ high. First pullback-triggered entry per Plan v2.",
         "status": "open"
       }
+    },
+    {
+      "id": "tqqq-2026-08-18-00391e",
+      "event": "open",
+      "date": "2026-08-18",
+      "position_id": "tqqq-2026-08-18-00391e",
+      "details": {
+        "id": "tqqq-2026-08-18-00391e",
+        "entry_date": "2026-08-18",
+        "underlying": "TQQQ",
+        "strategy": "bull_call_spread",
+        "tqqq_at_entry": 72.82,
+        "vxn_at_entry": null,
+        "long_strike": 52.5,
+        "short_strike": 120.0,
+        "width": 67.5,
+        "expiry": "2028-01-21",
+        "contracts": 1,
+        "net_debit_per_share": 21.3,
+        "net_debit_per_contract": 2130.0,
+        "total_cost": 2130.0,
+        "max_profit": 4620.0,
+        "breakeven": 73.8,
+        "note": "Monthly add #5. Textbook 70/+89 structure. Jan 2029 LEAPs still not listed.",
+        "status": "open"
+      }
     }
   ]
 }
