@@ -6,9 +6,13 @@ Self-contained; pulls TQQQ/QQQ/SPY/GLD/AGG from yfinance, builds synthetic
 
 Outputs (all under tqqq-journey/data/backtest/):
   - equity_curves.csv         : 2010-2026 DCA equity curves for strategy + benchmarks
+                                (includes spxl_strategy + spxl_bh columns)
   - rolling_4yr.csv           : 4yr window final outcomes, strategy + QQQ BH
-  - stress_test.csv           : 2000-2010 synthetic regime equity curve
-  - summary.json              : headline numbers, risk-adjusted metrics, parameter sweep
+  - rolling_4yr_spxl.csv      : same windows, strategy-on-SPXL + SPXL BH + SPY BH
+  - stress_test.csv           : 2000-2010 synthetic 3x-QQQ regime equity curve
+  - stress_test_spxl.csv      : 2000-2010 synthetic 3x-SPY regime equity curve
+  - summary.json              : headline numbers, risk-adjusted metrics, parameter sweep,
+                                and an "spxl" block with the cross-underlying comparison
 """
 from __future__ import annotations
 
@@ -248,19 +252,28 @@ def main():
     print("Pulling data...")
     qqq = yf.download("QQQ", start="1999-03-10", end="2026-04-18", auto_adjust=True, progress=False)
     tqqq = yf.download("TQQQ", start="2010-02-11", end="2026-04-18", auto_adjust=True, progress=False)
-    spy = yf.download("SPY", start="2005-01-01", end="2026-04-18", auto_adjust=True, progress=False)
+    # SPY pulled from 1999 so the synthetic-3x-SPY stress test covers the same 2000-2010 window
+    spy = yf.download("SPY", start="1999-03-10", end="2026-04-18", auto_adjust=True, progress=False)
+    spxl = yf.download("SPXL", start="2008-11-05", end="2026-04-18", auto_adjust=True, progress=False)
     gld = yf.download("GLD", start="2005-01-01", end="2026-04-18", auto_adjust=True, progress=False)
     agg = yf.download("AGG", start="2005-01-01", end="2026-04-18", auto_adjust=True, progress=False)
-    for df in (qqq, tqqq, spy, gld, agg):
+    for df in (qqq, tqqq, spy, spxl, gld, agg):
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
     qqq_c, tqqq_c = qqq["Close"], tqqq["Close"]
-    spy_c, gld_c, agg_c = spy["Close"], gld["Close"], agg["Close"]
+    spy_c, spxl_c, gld_c, agg_c = spy["Close"], spxl["Close"], gld["Close"], agg["Close"]
     tqqq_vol = realized_vol(tqqq_c).fillna(0.60)
+    spxl_vol = realized_vol(spxl_c).fillna(0.60)
     synth = build_synthetic_tqqq(qqq_c)
     synth_2010 = synth.loc[synth.index >= tqqq_c.index[0]].iloc[0]
     synth_scaled = synth * (tqqq_c.iloc[0] / synth_2010)
     synth_vol = realized_vol(synth_scaled).fillna(0.60)
+    # Synthetic 3x SPY, scaled to SPXL's first real print (2008-11-05). Same builder,
+    # same fee/financing assumptions; SPXL's actual expense ratio (~0.91%) is close enough.
+    synth_spy = build_synthetic_tqqq(spy_c)
+    synth_spy_anchor = synth_spy.loc[synth_spy.index >= spxl_c.index[0]].iloc[0]
+    synth_spy_scaled = synth_spy * (spxl_c.iloc[0] / synth_spy_anchor)
+    synth_spy_vol = realized_vol(synth_spy_scaled).fillna(0.60)
 
     STARTING = 50_000
     WEEKLY = 500
@@ -286,6 +299,15 @@ def main():
     # 60/40 SPY/AGG blend
     blend_6040 = bh_blend_with_dca([spy_c, agg_c], [0.6, 0.4], START, END, STARTING, WEEKLY)
 
+    # Same strategy, same window, on SPXL (3x S&P 500) — the cross-underlying check
+    print("  Running strategy on SPXL + SPXL buy-and-hold (same window)...")
+    spxl_strat = spread_dca_backtest(spxl_c, spxl_vol, START, END,
+                                     long_pct=0.70, width_pct=0.89,
+                                     starting_cash=STARTING, weekly_contrib=WEEKLY)
+    spxl_bh = bh_with_dca(spxl_c, START, END, STARTING, WEEKLY)
+    print(f"  SPXL strat: invested ${spxl_strat['total_invested']:,.0f} -> ${float(spxl_strat['equity'].iloc[-1]):,.0f}")
+    print(f"  SPXL BH:    invested ${spxl_bh['total_invested']:,.0f} -> ${float(spxl_bh['equity'].iloc[-1]):,.0f}")
+
     # Save all equity curves (align to strategy's date index)
     idx = strat["equity"].index
     curves_df = pd.DataFrame({
@@ -296,6 +318,8 @@ def main():
         "spy_bh": spy_bh["equity"].reindex(idx, method="ffill").values,
         "gld_bh": gld_bh["equity"].reindex(idx, method="ffill").values,
         "blend_6040": blend_6040["equity"].reindex(idx, method="ffill").values,
+        "spxl_strategy": spxl_strat["equity"].reindex(idx, method="ffill").values,
+        "spxl_bh": spxl_bh["equity"].reindex(idx, method="ffill").values,
     })
     curves_df.to_csv(OUT / "equity_curves.csv", index=False)
     print(f"  -> {OUT/'equity_curves.csv'}")
@@ -314,6 +338,7 @@ def main():
     print(f"  {len(start_dates)} rolling windows from {start_dates[0].date()} to {start_dates[-1].date()}")
 
     rows = []
+    spxl_rows = []
     for i, s in enumerate(start_dates):
         e = s + pd.DateOffset(years=WINDOW_YEARS)
         strat_w = spread_dca_backtest(tqqq_c, tqqq_vol, s, e,
@@ -329,10 +354,27 @@ def main():
             "qqq_bh_final": round(float(qqq_w["equity"].iloc[-1]), 0),
             "tqqq_bh_final": round(float(tqqq_w["equity"].iloc[-1]), 0),
         })
+        # Same window on SPXL — identical start dates so the two distributions are comparable
+        spxl_w = spread_dca_backtest(spxl_c, spxl_vol, s, e,
+                                      long_pct=0.70, width_pct=0.89,
+                                      starting_cash=STARTING, weekly_contrib=WEEKLY)
+        spxl_bh_w = bh_with_dca(spxl_c, s, e, STARTING, WEEKLY)
+        spy_w = bh_with_dca(spy_c, s, e, STARTING, WEEKLY)
+        if spxl_w is not None and spxl_bh_w is not None and spy_w is not None:
+            spxl_rows.append({
+                "start": s.strftime("%Y-%m-%d"),
+                "invested": round(spxl_w["total_invested"], 0),
+                "spxl_strategy_final": round(float(spxl_w["equity"].iloc[-1]), 0),
+                "spxl_bh_final": round(float(spxl_bh_w["equity"].iloc[-1]), 0),
+                "spy_bh_final": round(float(spy_w["equity"].iloc[-1]), 0),
+                "tqqq_strategy_final": round(float(strat_w["equity"].iloc[-1]), 0),
+            })
         if (i + 1) % 30 == 0:
             print(f"    ... window {i+1}/{len(start_dates)}")
     pd.DataFrame(rows).to_csv(OUT / "rolling_4yr.csv", index=False)
     print(f"  -> {OUT/'rolling_4yr.csv'}")
+    pd.DataFrame(spxl_rows).to_csv(OUT / "rolling_4yr_spxl.csv", index=False)
+    print(f"  -> {OUT/'rolling_4yr_spxl.csv'}")
 
     # =====================================================================
     # 3. Stress test: 2000-2010 synthetic TQQQ regime
@@ -356,6 +398,24 @@ def main():
         print(f"  QQQ BH:   ${synth_qqq_bh['total_invested']:,.0f} invested -> ${float(synth_qqq_bh['equity'].iloc[-1]):,.0f}")
         print(f"  -> {OUT/'stress_test.csv'}")
 
+    # Same regime on synthetic 3x SPY (the SPXL analog)
+    print("  Running 2000-2010 synthetic 3x-SPY regime (SPXL analog)...")
+    stress_spxl = spread_dca_backtest(synth_spy_scaled, synth_spy_vol, STRESS_START, STRESS_END,
+                                       long_pct=0.70, width_pct=0.89,
+                                       starting_cash=10_000, weekly_contrib=WEEKLY)
+    synth_spy_bh = bh_with_dca(spy_c, STRESS_START, STRESS_END, 10_000, WEEKLY)
+    if stress_spxl is not None and synth_spy_bh is not None:
+        idx = stress_spxl["equity"].index
+        stress_spxl_df = pd.DataFrame({
+            "date": idx,
+            "spxl_strategy": stress_spxl["equity"].values,
+            "spy_bh": synth_spy_bh["equity"].reindex(idx, method="ffill").values,
+        })
+        stress_spxl_df.to_csv(OUT / "stress_test_spxl.csv", index=False)
+        print(f"  SPXL strat: ${stress_spxl['total_invested']:,.0f} invested -> ${float(stress_spxl['equity'].iloc[-1]):,.0f}")
+        print(f"  SPY BH:     ${synth_spy_bh['total_invested']:,.0f} invested -> ${float(synth_spy_bh['equity'].iloc[-1]):,.0f}")
+        print(f"  -> {OUT/'stress_test_spxl.csv'}")
+
     # =====================================================================
     # 4. Single-path (no DCA) — theoretical max number
     # =====================================================================
@@ -363,6 +423,9 @@ def main():
     single = single_path_spread(tqqq_c, tqqq_vol, START, END,
                                 long_pct=0.70, width_pct=0.89,
                                 starting_cash=STARTING)
+    single_spxl = single_path_spread(spxl_c, spxl_vol, START, END,
+                                     long_pct=0.70, width_pct=0.89,
+                                     starting_cash=STARTING)
 
     # =====================================================================
     # 5. Summary JSON + parameter robustness snippet
@@ -396,12 +459,32 @@ def main():
             },
         },
         "risk_adjusted_comparison": {
-            "strategy":   compute_metrics(strat["equity"],    STARTING),
-            "qqq_bh":     compute_metrics(qqq_bh["equity"],    STARTING),
-            "tqqq_bh":    compute_metrics(tqqq_bh["equity"],   STARTING),
-            "spy_bh":     compute_metrics(spy_bh["equity"],    STARTING),
-            "gld_bh":     compute_metrics(gld_bh["equity"],    STARTING),
-            "blend_6040": compute_metrics(blend_6040["equity"],STARTING),
+            "strategy":      compute_metrics(strat["equity"],      STARTING),
+            "qqq_bh":        compute_metrics(qqq_bh["equity"],     STARTING),
+            "tqqq_bh":       compute_metrics(tqqq_bh["equity"],    STARTING),
+            "spxl_strategy": compute_metrics(spxl_strat["equity"], STARTING),
+            "spxl_bh":       compute_metrics(spxl_bh["equity"],    STARTING),
+            "spy_bh":        compute_metrics(spy_bh["equity"],     STARTING),
+            "gld_bh":        compute_metrics(gld_bh["equity"],     STARTING),
+            "blend_6040":    compute_metrics(blend_6040["equity"], STARTING),
+        },
+        "spxl": {
+            "note": "Identical 70/+89 spread strategy, identical DCA schedule and 2010-2026 window, "
+                    "run on SPXL (Direxion 3x S&P 500) instead of TQQQ. Cross-underlying check on "
+                    "whether the edge is the structure or the Nasdaq-100 specifically.",
+            "single_path_16yr": {
+                "starting": STARTING,
+                "final": round(float(single_spxl["equity"].iloc[-1]), 0) if single_spxl else None,
+                "multiple": round(float(single_spxl["equity"].iloc[-1]) / STARTING, 1) if single_spxl else None,
+            },
+            "stress_2000_2010": {
+                "starting": 10_000,
+                "total_invested": round(stress_spxl["total_invested"], 0) if stress_spxl else None,
+                "final": round(float(stress_spxl["equity"].iloc[-1]), 0) if stress_spxl else None,
+                "pct_of_invested": round(float(stress_spxl["equity"].iloc[-1]) / stress_spxl["total_invested"] * 100, 1) if stress_spxl else None,
+                "spy_bh_final": round(float(synth_spy_bh["equity"].iloc[-1]), 0) if synth_spy_bh else None,
+            },
+            # rolling_4yr block filled below from spxl_rows
         },
         "stress_2000_2010": {
             "starting": 10_000,
@@ -429,6 +512,25 @@ def main():
         summary["headline"]["realistic_rolling_4yr_median"]["qqq_bh_final_median"] = int(rdf["qqq_bh_final"].median())
         summary["headline"]["realistic_rolling_4yr_median"]["strategy_multiple"] = round(
             rdf["strategy_final"].median() / rdf["invested"].median(), 2)
+
+    sdf = pd.DataFrame(spxl_rows)
+    if len(sdf):
+        summary["spxl"]["rolling_4yr"] = {
+            "n_windows": int(len(sdf)),
+            "total_invested_median": int(sdf["invested"].median()),
+            "spxl_strategy_median": int(sdf["spxl_strategy_final"].median()),
+            "spxl_strategy_p10": int(sdf["spxl_strategy_final"].quantile(0.1)),
+            "spxl_strategy_p90": int(sdf["spxl_strategy_final"].quantile(0.9)),
+            "spxl_bh_median": int(sdf["spxl_bh_final"].median()),
+            "spy_bh_median": int(sdf["spy_bh_final"].median()),
+            "tqqq_strategy_median": int(sdf["tqqq_strategy_final"].median()),
+            "pct_windows_spxl_strat_beats_spy_bh": round(
+                float((sdf["spxl_strategy_final"] > sdf["spy_bh_final"]).mean() * 100), 1),
+            "pct_windows_spxl_strat_beats_spxl_bh": round(
+                float((sdf["spxl_strategy_final"] > sdf["spxl_bh_final"]).mean() * 100), 1),
+            "pct_windows_tqqq_strat_beats_spxl_strat": round(
+                float((sdf["tqqq_strategy_final"] > sdf["spxl_strategy_final"]).mean() * 100), 1),
+        }
 
     with open(OUT / "summary.json", "w") as f:
         json.dump(summary, f, indent=2, default=str)

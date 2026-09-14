@@ -21,25 +21,25 @@
     "realistic_rolling_4yr_median": {
       "note": "Median of 147 rolling 4-year windows, $50k start + $500/week DCA, 2010-2022 starts on real TQQQ",
       "total_invested": 154500,
-      "strategy_final_median": 564902,
+      "strategy_final_median": 564351,
       "qqq_bh_final_median": 245628,
-      "strategy_multiple": 3.66
+      "strategy_multiple": 3.65
     },
     "single_path_16yr": {
       "note": "$50k lump sum, no contributions, 16 years of real TQQQ 2010-2026, rolls at 13 months held",
       "starting": 50000,
-      "final": 2058831.0,
-      "multiple": 41.2
+      "final": 2063273.0,
+      "multiple": 41.3
     }
   },
   "risk_adjusted_comparison": {
     "strategy": {
-      "cagr": 56.81,
+      "cagr": 56.8,
       "maxdd": -89.68,
       "sharpe": 1.0,
       "sortino": 1.17,
       "calmar": 0.63,
-      "final": 72361303.0
+      "final": 72357249.0
     },
     "qqq_bh": {
       "cagr": 29.49,
@@ -55,7 +55,23 @@
       "sharpe": 0.97,
       "sortino": 1.24,
       "calmar": 0.6,
-      "final": 32492630.0
+      "final": 32492629.0
+    },
+    "spxl_strategy": {
+      "cagr": 50.32,
+      "maxdd": -86.41,
+      "sharpe": 0.95,
+      "sortino": 1.11,
+      "calmar": 0.58,
+      "final": 36526726.0
+    },
+    "spxl_bh": {
+      "cagr": 38.42,
+      "maxdd": -76.81,
+      "sharpe": 0.9,
+      "sortino": 1.1,
+      "calmar": 0.5,
+      "final": 9618989.0
     },
     "spy_bh": {
       "cagr": 25.5,
@@ -82,10 +98,38 @@
       "final": 1412693.0
     }
   },
+  "spxl": {
+    "note": "Identical 70/+89 spread strategy, identical DCA schedule and 2010-2026 window, run on SPXL (Direxion 3x S&P 500) instead of TQQQ. Cross-underlying check on whether the edge is the structure or the Nasdaq-100 specifically.",
+    "single_path_16yr": {
+      "starting": 50000,
+      "final": 1641251.0,
+      "multiple": 32.8
+    },
+    "stress_2000_2010": {
+      "starting": 10000,
+      "total_invested": 274000,
+      "final": 174237.0,
+      "pct_of_invested": 63.6,
+      "spy_bh_final": 279103.0
+    },
+    "rolling_4yr": {
+      "n_windows": 147,
+      "total_invested_median": 154500,
+      "spxl_strategy_median": 470723,
+      "spxl_strategy_p10": 225918,
+      "spxl_strategy_p90": 684217,
+      "spxl_bh_median": 330854,
+      "spy_bh_median": 217814,
+      "tqqq_strategy_median": 564351,
+      "pct_windows_spxl_strat_beats_spy_bh": 95.2,
+      "pct_windows_spxl_strat_beats_spxl_bh": 89.8,
+      "pct_windows_tqqq_strat_beats_spxl_strat": 81.0
+    }
+  },
   "stress_2000_2010": {
     "starting": 10000,
     "total_invested": 274000,
-    "final": 228350.0,
+    "final": 228328.0,
     "pct_of_invested": 83.3
   },
   "parameter_robustness_sharpe": {

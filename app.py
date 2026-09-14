@@ -320,6 +320,16 @@ elif page == "Backtest":
         df = pd.read_csv(BT / "stress_test.csv", parse_dates=["date"])
         return df
 
+    @st.cache_data(ttl=300)
+    def _load_rolling_spxl():
+        p = BT / "rolling_4yr_spxl.csv"
+        return pd.read_csv(p, parse_dates=["start"]) if p.exists() else None
+
+    @st.cache_data(ttl=300)
+    def _load_stress_spxl():
+        p = BT / "stress_test_spxl.csv"
+        return pd.read_csv(p, parse_dates=["date"]) if p.exists() else None
+
     if not (BT / "summary.json").exists():
         st.warning("Backtest data not found. Run `python scripts/precompute_backtest.py` to generate it.")
     else:
@@ -327,6 +337,10 @@ elif page == "Backtest":
         curves = _load_equity_curves()
         rolling = _load_rolling()
         stress = _load_stress()
+        rolling_spxl = _load_rolling_spxl()
+        stress_spxl = _load_stress_spxl()
+        has_spxl = ("spxl" in summary and "spxl_strategy" in curves.columns
+                    and rolling_spxl is not None and stress_spxl is not None)
 
         st.title("Backtest Results")
         st.caption(
@@ -448,14 +462,15 @@ elif page == "Backtest":
             "Strategy vs. every reasonable passive alternative on the same starting capital and "
             "contribution schedule. Included: TQQQ, QQQ, SPY, GLD, and 60/40 (SPY+AGG)."
         )
-        full = curves.melt("date", var_name="series", value_name="equity")
+        full_cols = ["date", "strategy", "qqq_bh", "tqqq_bh", "spy_bh", "gld_bh", "blend_6040"]
+        full = curves[full_cols].melt("date", var_name="series", value_name="equity")
         full_map = {
             "strategy": "Strategy",
             "qqq_bh": "QQQ", "tqqq_bh": "TQQQ",
             "spy_bh": "SPY", "gld_bh": "GLD", "blend_6040": "60/40 SPY+AGG",
         }
         full["Strategy"] = full["series"].map(full_map)
-        full = full.dropna(subset=["equity"])
+        full = full.dropna(subset=["equity", "Strategy"])
         chart_c = alt.Chart(full).mark_line(strokeWidth=1.5).encode(
             x=alt.X("date:T", title=None),
             y=alt.Y("equity:Q", title="Equity ($)", scale=alt.Scale(type="log")),
@@ -510,13 +525,132 @@ elif page == "Backtest":
         st.divider()
 
         # -----------------------------------------------------------------
+        # SPXL cross-underlying check
+        # -----------------------------------------------------------------
+        if has_spxl:
+            sp = summary["spxl"]
+            ra_all = summary["risk_adjusted_comparison"]
+            m_tqqq = ra_all["strategy"]
+            m_spxl = ra_all["spxl_strategy"]
+            m_spxl_bh = ra_all["spxl_bh"]
+            m_spy = ra_all["spy_bh"]
+
+            st.markdown("### Same strategy on SPXL (3x S&P 500)")
+            st.markdown(
+                "Is the edge the spread structure, or is it the Nasdaq-100 specifically? "
+                "This runs the identical 70/+89 spread, identical $50k + $500/week DCA, identical "
+                "2010-2026 window on **SPXL** (Direxion's 3x S&P 500 ETF) instead of TQQQ. "
+                "SPY buy-and-hold and SPXL buy-and-hold are the corresponding benchmarks."
+            )
+
+            # Chart E — TQQQ strat vs SPXL strat vs SPXL BH vs SPY BH
+            e_cols = ["date", "strategy", "spxl_strategy", "spxl_bh", "spy_bh"]
+            e_data = curves[e_cols].melt("date", var_name="series", value_name="equity")
+            e_map = {
+                "strategy": "Strategy on TQQQ",
+                "spxl_strategy": "Strategy on SPXL",
+                "spxl_bh": "SPXL buy-and-hold",
+                "spy_bh": "SPY buy-and-hold",
+            }
+            e_data["Strategy"] = e_data["series"].map(e_map)
+            e_data = e_data.dropna(subset=["equity"])
+            chart_e = alt.Chart(e_data).mark_line(strokeWidth=2).encode(
+                x=alt.X("date:T", title=None),
+                y=alt.Y("equity:Q", title="Equity ($)", scale=alt.Scale(type="log")),
+                color=alt.Color(
+                    "Strategy:N",
+                    scale=alt.Scale(
+                        domain=list(e_map.values()),
+                        range=["#8b2c2c", "#6a3d8b", "#2c8b7a", "#6b6b6b"],
+                    ),
+                    legend=alt.Legend(orient="top", title=None),
+                ),
+            ).properties(height=380)
+            st.altair_chart(chart_e, use_container_width=True)
+
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Strategy on TQQQ", f"${m_tqqq['final']:,.0f}", f"{m_tqqq['cagr']:.1f}% CAGR")
+            c2.metric("Strategy on SPXL", f"${m_spxl['final']:,.0f}", f"{m_spxl['cagr']:.1f}% CAGR")
+            c3.metric("SPXL buy-and-hold", f"${m_spxl_bh['final']:,.0f}", f"{m_spxl_bh['cagr']:.1f}% CAGR")
+            c4.metric("SPY buy-and-hold", f"${m_spy['final']:,.0f}", f"{m_spy['cagr']:.1f}% CAGR")
+
+            # Chart F — rolling 4-year distribution, SPXL strategy vs TQQQ strategy vs SPY BH
+            st.markdown("#### 4-year outcome distribution, SPXL vs TQQQ")
+            rs = sp.get("rolling_4yr", {})
+            st.markdown(
+                f"Same {rs.get('n_windows', len(rolling_spxl))} rolling 4-year windows as above, "
+                "identical start dates, so the two strategy distributions are directly comparable."
+            )
+            f_data = []
+            for _, row in rolling_spxl.iterrows():
+                f_data.append({"Start": row["start"], "Final": row["tqqq_strategy_final"], "Strategy": "Strategy on TQQQ"})
+                f_data.append({"Start": row["start"], "Final": row["spxl_strategy_final"], "Strategy": "Strategy on SPXL"})
+                f_data.append({"Start": row["start"], "Final": row["spy_bh_final"], "Strategy": "SPY buy-and-hold"})
+            f_df = pd.DataFrame(f_data)
+            chart_f = alt.Chart(f_df).mark_circle(size=60, opacity=0.6).encode(
+                x=alt.X("Start:T", title="Window start date"),
+                y=alt.Y("Final:Q", title="Final equity ($)", scale=alt.Scale(type="log")),
+                color=alt.Color(
+                    "Strategy:N",
+                    scale=alt.Scale(
+                        domain=["Strategy on TQQQ", "Strategy on SPXL", "SPY buy-and-hold"],
+                        range=["#8b2c2c", "#6a3d8b", "#6b6b6b"],
+                    ),
+                    legend=alt.Legend(orient="top", title=None),
+                ),
+                tooltip=["Start:T", "Strategy:N", alt.Tooltip("Final:Q", format="$,.0f")],
+            ).properties(height=360)
+            st.altair_chart(chart_f, use_container_width=True)
+
+            if rs:
+                d1, d2, d3 = st.columns(3)
+                d1.metric("SPXL strategy median (4yr)", f"${rs['spxl_strategy_median']:,.0f}",
+                          f"{rs['spxl_strategy_median']/rs['spy_bh_median']:.1f}x vs SPY BH median")
+                d2.metric("% windows SPXL strategy beats SPY BH",
+                          f"{rs['pct_windows_spxl_strat_beats_spy_bh']:.0f}%")
+                d3.metric("% windows TQQQ strategy beats SPXL strategy",
+                          f"{rs['pct_windows_tqqq_strat_beats_spxl_strat']:.0f}%")
+
+            # Stress test parallel — synthetic 3x SPY 2000-2010
+            st.markdown("#### Stress test parallel: synthetic 3x S&P 500, 2000-2010")
+            st.markdown(
+                "Same dot-com + GFC window, same $10k + $500/week, run on a synthetic 3x-leveraged "
+                "SPY built the same way as the synthetic 3x QQQ above."
+            )
+            ss_q = summary["stress_2000_2010"]
+            ss_s = sp["stress_2000_2010"]
+            g1, g2, g3 = st.columns(3)
+            g1.metric("Synthetic 3x QQQ: strategy final", f"${ss_q['final']:,.0f}",
+                      f"{ss_q['pct_of_invested']:.0f}% of invested")
+            g2.metric("Synthetic 3x SPY: strategy final", f"${ss_s['final']:,.0f}",
+                      f"{ss_s['pct_of_invested']:.0f}% of invested")
+            g3.metric("SPY buy-and-hold final (same window)", f"${ss_s['spy_bh_final']:,.0f}")
+            stress_s_m = stress_spxl.melt("date", var_name="series", value_name="equity")
+            stress_s_map = {"spxl_strategy": "Strategy (synthetic 3x SPY)", "spy_bh": "SPY buy-and-hold"}
+            stress_s_m["Strategy"] = stress_s_m["series"].map(stress_s_map)
+            chart_g = alt.Chart(stress_s_m).mark_line(strokeWidth=2).encode(
+                x=alt.X("date:T", title=None),
+                y=alt.Y("equity:Q", title="Equity ($)"),
+                color=alt.Color(
+                    "Strategy:N",
+                    scale=alt.Scale(domain=list(stress_s_map.values()), range=["#6a3d8b", "#6b6b6b"]),
+                    legend=alt.Legend(orient="top", title=None),
+                ),
+            ).properties(height=300)
+            st.altair_chart(chart_g, use_container_width=True)
+
+            st.divider()
+
+        # -----------------------------------------------------------------
         # Risk-adjusted metrics table
         # -----------------------------------------------------------------
         st.markdown("### Risk-adjusted metrics (2010-2026, equal contributions)")
         ra = summary["risk_adjusted_comparison"]
         display_names = {
-            "strategy": "Strategy (70/+89)", "qqq_bh": "QQQ buy-and-hold",
-            "tqqq_bh": "TQQQ buy-and-hold", "spy_bh": "SPY buy-and-hold",
+            "strategy": "Strategy on TQQQ (70/+89)", "qqq_bh": "QQQ buy-and-hold",
+            "tqqq_bh": "TQQQ buy-and-hold",
+            "spxl_strategy": "Strategy on SPXL (70/+89)", "spxl_bh": "SPXL buy-and-hold",
+            "spy_bh": "SPY buy-and-hold",
             "gld_bh": "GLD buy-and-hold", "blend_6040": "60/40 SPY+AGG",
         }
         ra_rows = []
@@ -573,9 +707,13 @@ the 2010-2026 T-bill average).
 
 **Data sources**:
 - TQQQ: yfinance adjusted close, 2010-02-11 through 2026-04-17
+- SPXL: yfinance adjusted close, 2008-11-05 onward; strategy run over the same
+  2010-02-11 to 2026-04-17 window as TQQQ for a like-for-like comparison
 - QQQ, SPY, GLD, AGG: yfinance adjusted close
 - Synthetic 3x-leveraged QQQ (for pre-2010 regime): daily rebalanced from QQQ,
   0.95% annual fee, 0.5% swap financing spread, daily return floored at -99%
+- Synthetic 3x-leveraged SPY (SPXL analog, pre-2010): same construction from SPY,
+  scaled to SPXL's first real print
 
 **What this model does not capture**:
 - IV term structure (assumes flat IV surface)
