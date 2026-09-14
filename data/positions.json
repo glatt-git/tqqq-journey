@@ -119,6 +119,26 @@
       "breakeven": 73.8,
       "note": "Monthly add #5. Textbook 70/+89 structure. Jan 2029 LEAPs still not listed.",
       "status": "open"
+    },
+    {
+      "id": "tqqq-2026-09-14-5cb53b",
+      "entry_date": "2026-09-14",
+      "underlying": "TQQQ",
+      "strategy": "bull_call_spread",
+      "tqqq_at_entry": 67.75,
+      "vxn_at_entry": null,
+      "long_strike": 50.0,
+      "short_strike": 115.0,
+      "width": 65.0,
+      "expiry": "2028-01-21",
+      "contracts": 1,
+      "net_debit_per_share": 21.0,
+      "net_debit_per_contract": 2100.0,
+      "total_cost": 2100.0,
+      "max_profit": 4400.0,
+      "breakeven": 71.0,
+      "note": "Monthly add #6. Jan 2029 chain too narrow (58-82 range at listing), fell back to Jan 2028. Chose 50/115 to consolidate with Cohort A (now 4 contracts).",
+      "status": "open"
     }
   ]
 }
