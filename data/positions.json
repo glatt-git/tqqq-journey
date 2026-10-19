@@ -139,6 +139,26 @@
       "breakeven": 71.0,
       "note": "Monthly add #6. Jan 2029 chain too narrow (58-82 range at listing), fell back to Jan 2028. Chose 50/115 to consolidate with Cohort A (now 4 contracts).",
       "status": "open"
+    },
+    {
+      "id": "tqqq-2026-10-19-26ee60",
+      "entry_date": "2026-10-19",
+      "underlying": "TQQQ",
+      "strategy": "bull_call_spread",
+      "tqqq_at_entry": 70.8,
+      "vxn_at_entry": null,
+      "long_strike": 50.0,
+      "short_strike": 115.0,
+      "width": 65.0,
+      "expiry": "2029-01-19",
+      "contracts": 1,
+      "net_debit_per_share": 20.0,
+      "net_debit_per_contract": 2000.0,
+      "total_cost": 2000.0,
+      "max_profit": 4500.0,
+      "breakeven": 70.0,
+      "note": "Monthly add #7. First Jan 2029 entry: 27 months out, cleanly satisfies the 24mo/13mo-hold rules. Chain filled out from 58-82 in Sep to 35-125 now.",
+      "status": "open"
     }
   ]
 }
