@@ -159,6 +159,26 @@
       "breakeven": 70.0,
       "note": "Monthly add #7. First Jan 2029 entry: 27 months out, cleanly satisfies the 24mo/13mo-hold rules. Chain filled out from 58-82 in Sep to 35-125 now.",
       "status": "open"
+    },
+    {
+      "id": "tqqq-2026-11-04-0806dc",
+      "entry_date": "2026-11-04",
+      "underlying": "TQQQ",
+      "strategy": "bull_call_spread",
+      "tqqq_at_entry": 63.95,
+      "vxn_at_entry": null,
+      "long_strike": 50.0,
+      "short_strike": 115.0,
+      "width": 65.0,
+      "expiry": "2029-01-19",
+      "contracts": 1,
+      "net_debit_per_share": 17.15,
+      "net_debit_per_contract": 1714.9999999999998,
+      "total_cost": 1715.0,
+      "max_profit": 4785.0,
+      "breakeven": 67.15,
+      "note": "Pullback add #2: TQQQ -24% off the 10/6 high of 84.25. Same strikes as the 10/19 Jan 2029 entry, bought cheaper.",
+      "status": "open"
     }
   ]
 }
