@@ -179,6 +179,26 @@
       "breakeven": 67.15,
       "note": "Pullback add #2: TQQQ -24% off the 10/6 high of 84.25. Same strikes as the 10/19 Jan 2029 entry, bought cheaper.",
       "status": "open"
+    },
+    {
+      "id": "tqqq-2026-11-05-5547b7",
+      "entry_date": "2026-11-05",
+      "underlying": "TQQQ",
+      "strategy": "bull_call_spread",
+      "tqqq_at_entry": 54.39,
+      "vxn_at_entry": null,
+      "long_strike": 40.0,
+      "short_strike": 90.0,
+      "width": 50.0,
+      "expiry": "2029-01-19",
+      "contracts": 1,
+      "net_debit_per_share": 14.05,
+      "net_debit_per_contract": 1405.0,
+      "total_cost": 1405.0,
+      "max_profit": 3595.0,
+      "breakeven": 54.05,
+      "note": "Monthly add #8, pulled forward from the 11/10-15 window on a -4% Nasdaq day. TQQQ -35% off the 10/6 high. Opens Cohort F (Jan 2029 40/90).",
+      "status": "open"
     }
   ]
 }
