@@ -70,11 +70,19 @@ def get_current_tqqq_iv():
             tqqq.columns = tqqq.columns.get_level_values(0)
         if len(tqqq) == 0:
             return None, None, None
-        tqqq_close = float(tqqq["Close"].iloc[-1])
-        last_date = tqqq.index[-1].date()
+        # Yahoo sometimes returns the newest bar with an empty close. NaN is truthy,
+        # so it would slip past the "no price" fallback below and show as $nan.
+        closes = tqqq["Close"].dropna()
+        closes = closes[closes > 0]
+        if len(closes) < 2:
+            return None, None, None
+        tqqq_close = float(closes.iloc[-1])
+        last_date = closes.index[-1].date()
         import numpy as np
-        lr = np.log(tqqq["Close"] / tqqq["Close"].shift(1)).dropna()
+        lr = np.log(closes / closes.shift(1)).dropna()
         rv = float(lr.tail(60).std() * math.sqrt(252))
+        if not (math.isfinite(tqqq_close) and math.isfinite(rv)):
+            return None, None, None
         iv = max(0.30, min(1.5, rv * 1.1))
         return tqqq_close, iv, last_date
     except Exception:
@@ -118,8 +126,9 @@ for _p in _positions_live:
         _realized += float(_p.get("realized_pnl", 0))
 
 # Fallback: yfinance returned None — use the daily cron's stored values
-if not tqqq_now and len(_eq_live) > 0:
-    _stored_open = float(_eq_live["open_spread_value"].iloc[-1])
+_stored_open_values = _eq_live["open_spread_value"].dropna() if len(_eq_live) > 0 else []
+if not tqqq_now and len(_stored_open_values) > 0:
+    _stored_open = float(_stored_open_values.iloc[-1])
     _open_cost_basis = sum(float(p["total_cost"]) for p in _positions_live
                            if p.get("status") == "open")
     _unrealized = _stored_open - _open_cost_basis
@@ -898,7 +907,7 @@ elif page == "Equity Curve":
         st.info("Need at least 2 days of history to plot. Check back tomorrow.")
     else:
         import altair as alt
-        chart_data = eq_df[["date", "total_equity"]].copy()
+        chart_data = eq_df[["date", "total_equity"]].dropna().copy()
         chart_data = chart_data.rename(columns={"total_equity": "Total equity"})
         chart_data = chart_data.melt("date", var_name="series", value_name="value")
         chart = alt.Chart(chart_data).mark_line().encode(

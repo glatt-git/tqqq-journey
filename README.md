@@ -72,6 +72,8 @@ python scripts/log_trade.py ...
 python scripts/daily_update.py
 ```
 
+Add `--dry-run` to print the rows without writing anything, or `--no-push` to update the CSV without committing.
+
 (Otherwise the GitHub Action at `.github/workflows/daily.yml` runs this at 4:30pm ET every weekday automatically.)
 
 ### Where do I see the message to paste to WhatsApp?
@@ -120,7 +122,8 @@ we're nowhere near needing SQL.
   prices differ due to bid/ask, IV skew, and vol-of-vol. The tracker will be
   approximate on day-to-day MTM; realized P&L on close/expire is exact.
 - **The `daily_update.py` script uses `yfinance` for TQQQ close prices.** Yahoo has
-  occasional data delays or outages; if the action fails, the next day's run will
-  backfill.
+  occasional data delays or outages. The script retries, then falls back to Yahoo's
+  live quote and the Nasdaq public API. If no close can be obtained it writes nothing
+  and the action fails; the next successful run fills in the missed days.
 - **Equity history starts from the first trade.** Days before any position exists are
   not in the history (no meaningful MTM to record).

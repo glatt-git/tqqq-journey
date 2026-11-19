@@ -4,12 +4,24 @@ from __future__ import annotations
 import json
 import math
 import subprocess
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
 import numpy as np
 import pandas as pd
+from pandas.tseries.holiday import (
+    AbstractHolidayCalendar,
+    GoodFriday,
+    Holiday,
+    USLaborDay,
+    USMartinLutherKingJr,
+    USMemorialDay,
+    USPresidentsDay,
+    USThanksgivingDay,
+    nearest_workday,
+    sunday_to_monday,
+)
 
 REPO = Path(__file__).resolve().parent.parent
 DATA = REPO / "data"
@@ -90,10 +102,16 @@ def append_equity_row(row: dict) -> None:
 # =====================================================================
 def estimate_iv(prices: pd.Series, window: int = 60, iv_mult: float = 1.1,
                 floor: float = 0.30, cap: float = 1.5) -> float:
+    # Drop unusable closes first so one bad bar cannot poison the estimate.
+    prices = pd.to_numeric(prices, errors="coerce")
+    prices = prices[np.isfinite(prices) & (prices > 0)]
     if len(prices) < window + 5:
         return 0.60
     lr = np.log(prices / prices.shift(1)).dropna()
     rv = float(lr.tail(window).std() * math.sqrt(252))
+    if not math.isfinite(rv):
+        # max(floor, min(cap, nan)) silently evaluates to the cap, so refuse instead.
+        raise ValueError("realized vol is not finite; cannot estimate IV")
     return max(floor, min(cap, rv * iv_mult))
 
 
@@ -104,6 +122,12 @@ def value_position(pos: dict, current_tqqq: float, iv: float,
                    today: Optional[date] = None) -> dict:
     """Compute current mark-to-market value for one spread position.
     Returns dict with per_contract_value, total_value, unrealized_pnl, etc."""
+    # math.log(nan) does not raise, so a missing price or IV would otherwise flow
+    # through Black-Scholes and come out as a NaN valuation. Stop it here.
+    if not (math.isfinite(current_tqqq) and current_tqqq > 0):
+        raise ValueError(f"cannot value {pos.get('id')}: TQQQ price is {current_tqqq!r}")
+    if not (math.isfinite(iv) and iv > 0):
+        raise ValueError(f"cannot value {pos.get('id')}: IV is {iv!r}")
     if today is None:
         today = date.today()
     expiry = datetime.strptime(pos["expiry"], "%Y-%m-%d").date()
@@ -137,6 +161,72 @@ def value_position(pos: dict, current_tqqq: float, iv: float,
         "max_profit_per_contract": round(max_profit_per_contract, 2),
         "max_total_profit": round(max_profit_per_contract * int(pos["contracts"]), 2),
     }
+
+
+# =====================================================================
+# Position state as of a given date (for valuing past dates)
+# =====================================================================
+def _as_date(s: str) -> date:
+    return datetime.strptime(str(s)[:10], "%Y-%m-%d").date()
+
+
+def position_state_on(pos: dict, d: date) -> str:
+    """'pending' (not entered yet), 'open', or 'closed' as of the close of day d."""
+    if _as_date(pos["entry_date"]) > d:
+        return "pending"
+    if pos.get("status") == "open":
+        return "open"
+    exit_date = pos.get("exit_date")
+    return "open" if exit_date and _as_date(exit_date) > d else "closed"
+
+
+def cash_on(positions: list[dict], invested: float, d: date) -> float:
+    """Cash as of day d: invested, minus entry costs paid, plus exit proceeds received."""
+    cash = float(invested)
+    for p in positions:
+        state = position_state_on(p, d)
+        if state != "pending":
+            cash -= float(p["total_cost"])
+        if state == "closed":
+            cash += float(p.get("gross_exit_value", 0.0))
+    return cash
+
+
+# =====================================================================
+# NYSE session calendar. Only used to decide whether a close is overdue
+# (i.e. whether the cron should fail loudly); never used to compute values.
+# =====================================================================
+class _NYSEHolidays(AbstractHolidayCalendar):
+    rules = [
+        Holiday("New Year's Day", month=1, day=1, observance=sunday_to_monday),
+        USMartinLutherKingJr,
+        USPresidentsDay,
+        GoodFriday,
+        USMemorialDay,
+        Holiday("Juneteenth", month=6, day=19, observance=nearest_workday),
+        Holiday("Independence Day", month=7, day=4, observance=nearest_workday),
+        USLaborDay,
+        USThanksgivingDay,
+        Holiday("Christmas Day", month=12, day=25, observance=nearest_workday),
+    ]
+
+
+def is_nyse_session(d: date) -> bool:
+    if d.weekday() >= 5:
+        return False
+    holidays = _NYSEHolidays().holidays(pd.Timestamp(d.year - 1, 12, 1),
+                                        pd.Timestamp(d.year + 1, 1, 31))
+    return pd.Timestamp(d) not in holidays
+
+
+def last_completed_session(now_ny: pd.Timestamp) -> date:
+    """Most recent NYSE session whose 16:00 ET close has already happened."""
+    d = now_ny.date()
+    if now_ny.hour < 16:
+        d -= timedelta(days=1)
+    while not is_nyse_session(d):
+        d -= timedelta(days=1)
+    return d
 
 
 # =====================================================================
